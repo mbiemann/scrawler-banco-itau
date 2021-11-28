@@ -1,13 +1,10 @@
 # Scrawler Banco Itaú
+
 Extrator em Python de dados bancários do Banco Itaú pelo Internet Banking Desktop utilizando Selenium
 
-
-Faz download do geckodriver conforme seu sistema operacional
+Fazer download do geckodriver conforme seu sistema operacional:
 
 https://github.com/mozilla/geckodriver/releases
-
-
-
 
 ```python
 
