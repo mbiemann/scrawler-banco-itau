@@ -8,21 +8,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
-_meses = {
-    "jan": 1,
-    "fev": 2,
-    "mar": 3,
-    "abr": 4,
-    "mai": 5,
-    "jun": 6,
-    "jul": 7,
-    "ago": 8,
-    "set": 9,
-    "out": 10,
-    "nov": 11,
-    "dez": 12
-}
-
 class ExtratoTipo(object):
     Futuro = 'futuro'
     Ultimos3dias = '3'
@@ -44,6 +29,20 @@ class MesAnoException(Exception):
 
 class ScrawlerItau:
 
+    _meses = {
+        "jan": 1,
+        "fev": 2,
+        "mar": 3,
+        "abr": 4,
+        "mai": 5,
+        "jun": 6,
+        "jul": 7,
+        "ago": 8,
+        "set": 9,
+        "out": 10,
+        "nov": 11,
+        "dez": 12
+    }
     def __init__(self, agencia, conta, nome, senha):
         self._agencia = agencia
         self._conta = conta
@@ -328,7 +327,7 @@ class ScrawlerItau:
                             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                             # date
                             dates = s_elem_cols[0].text.strip().split(' / ')
-                            date = datetime.date(2021,_meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
+                            date = datetime.date(2021,self._meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
@@ -355,7 +354,7 @@ class ScrawlerItau:
                         s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                         # date
                         dates = s_elem_cols[0].text.strip().split(' / ')
-                        date = datetime.date(2021,_meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
+                        date = datetime.date(2021,self._meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
                         # value
                         values = s_elem_cols[2].text.strip().split('\n')
                         value = -1 * float(

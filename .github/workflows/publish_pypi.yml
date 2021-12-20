@@ -1,0 +1,14 @@
+name: Publish PyPI
+on:
+  release:
+    types: [published]
+concurrency: ${{ github.workflow }}
+jobs:
+  twine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: sed -i 's/___CIVERSION___/${{ github.ref_name }}/g' setup.py
+      - run: pip install --upgrade build twine
+      - run: python -m build
+      - run: python -m twine upload -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} dist/*

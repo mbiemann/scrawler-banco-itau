@@ -1,5 +1,4 @@
 # Scrawler Banco Itaú
-
 Extrator em Python de dados bancários do Banco Itaú pelo Internet Banking Desktop utilizando Selenium
 
 Fazer download do geckodriver conforme seu sistema operacional:
@@ -23,6 +22,7 @@ scrawler.open('geckodriver') # utilizar geckodriver
 
 # saldo
 saldo = scrawler.get_saldo()
+print(f'saldo atual = {saldo}\n')
 
 # extrato (para mais opções ver ExtratoTipo)
 extrato = scrawler.get_extrato(tipo=ExtratoTipo.Ultimos3dias)
