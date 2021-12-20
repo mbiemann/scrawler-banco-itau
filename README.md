@@ -8,6 +8,8 @@ Necessário fazer download do geckodriver, conforme seu sistema operacional:
 
 - https://github.com/mozilla/geckodriver/releases
 
+___
+
 ```python
 
 from scrawler_itau import ScrawlerItau, ExtratoTipo, CartaoFaturaTipo
@@ -21,7 +23,7 @@ scrawler = ScrawlerItau(
 )
 
 # abrir navegador
-scrawler.open('geckodriver') # utilizar geckodriver
+scrawler.open('./geckodriver') # utilizar geckodriver baixado anteriormente
 
 # saldo
 saldo = scrawler.get_saldo()
