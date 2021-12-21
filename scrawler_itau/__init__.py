@@ -1,4 +1,4 @@
-from scrawler_itau import (
+from scrawler_itau.scrawler_itau import (
     ScrawlerItau,
     ExtratoTipo,
     CartaoFaturaTipo
