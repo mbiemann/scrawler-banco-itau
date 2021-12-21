@@ -4,6 +4,12 @@ Extrator em Python de dados bancários do Banco Itaú pelo Internet Banking Desk
 
 ___
 
+Instale o módulo utilizando o pip:
+
+`pip install scrawler-itau`
+
+___
+
 Necessário fazer download do geckodriver, conforme seu sistema operacional:
 
 - https://github.com/mozilla/geckodriver/releases
