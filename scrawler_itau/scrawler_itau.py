@@ -104,18 +104,18 @@ class ScrawlerItau:
 
         # ir para página inicial
         time.sleep(3)
-        s_elem = self.s_wait.until(EC.visibility_of_element_located((By.ID,'HomeLogo')))
+        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'HomeLogo')))
         s_elem.click()
 
         # expandir Cartões, se necessário
         time.sleep(3)
-        s_elem = self.s_wait.until(EC.visibility_of_element_located((By.ID,'cartao-card-accordion')))
+        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'cartao-card-accordion')))
         if s_elem.get_attribute('aria-expanded') == 'false':
             s_elem.click()
 
         # expandir Saldo e Extrato da Conta, se necessário
         time.sleep(3)
-        s_elem = self.s_wait.until(EC.visibility_of_element_located((By.ID,'saldo-extrato-card-accordion')))
+        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'saldo-extrato-card-accordion')))
         if s_elem.get_attribute('aria-expanded') == 'false':
             s_elem.click()
 
@@ -348,28 +348,35 @@ class ScrawlerItau:
 
                     order = {}
 
-                    for s_elem_row in s_elem_type.find_element_by_tag_name('tbody').find_elements_by_tag_name('tr'):
+                    try:
+                        s_elem_tbody = s_elem_type.find_element_by_tag_name('tbody')
+                    except Exception as e:
+                        print(e)
+                        s_elem_tbody = None
+                    
+                    if s_elem_tbody:
+                        for s_elem_row in s_elem_tbody.find_elements_by_tag_name('tr'):
 
-                        # columns
-                        s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
-                        # date
-                        dates = s_elem_cols[0].text.strip().split(' / ')
-                        date = datetime.date(2021,self._meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
-                        # value
-                        values = s_elem_cols[2].text.strip().split('\n')
-                        value = -1 * float(
-                            values[0 if len(values) == 1 else 1].replace('R$ ','').replace('.','').replace(',','.'))
-                        # order
-                        order[date] = 1 + (order[date] if date in order else 0)
+                            # columns
+                            s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
+                            # date
+                            dates = s_elem_cols[0].text.strip().split(' / ')
+                            date = datetime.date(2021,self._meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
+                            # value
+                            values = s_elem_cols[2].text.strip().split('\n')
+                            value = -1 * float(
+                                values[0 if len(values) == 1 else 1].replace('R$ ','').replace('.','').replace(',','.'))
+                            # order
+                            order[date] = 1 + (order[date] if date in order else 0)
 
-                        # item
-                        items.append({
-                            "group": type_name,
-                            "date": date,
-                            "name": s_elem_cols[1].text.strip(),
-                            "value": value,
-                            "order": order[date]
-                        })
+                            # item
+                            items.append({
+                                "group": type_name,
+                                "date": date,
+                                "name": s_elem_cols[1].text.strip(),
+                                "value": value,
+                                "order": order[date]
+                            })
 
             base.append({
                 "name": nome,
