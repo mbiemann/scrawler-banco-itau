@@ -3,6 +3,7 @@ import time
 import random
 
 from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
@@ -30,6 +31,21 @@ class MesAnoException(Exception):
 class ScrawlerItau:
 
     _meses = {
+        "janeiro": 1,
+        "fevereiro": 2,
+        "março": 3,
+        "abril": 4,
+        "maio": 5,
+        "junho": 6,
+        "julho": 7,
+        "agosto": 8,
+        "setembro": 9,
+        "outubro": 10,
+        "novembro": 11,
+        "dezembro": 12
+    }
+
+    _meses_abr = {
         "jan": 1,
         "fev": 2,
         "mar": 3,
@@ -43,11 +59,50 @@ class ScrawlerItau:
         "nov": 11,
         "dez": 12
     }
+
     def __init__(self, agencia, conta, nome, senha):
         self._agencia = agencia
         self._conta = conta
         self._nome = nome
         self._senha = senha
+
+    def _expand_home(self):
+
+        # expandir Cartões, se necessário
+        tries = 1
+        while True:
+            try:
+                time.sleep(3)
+                s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'cartao-card-accordion')))
+                if s_elem.get_attribute('aria-expanded') == 'false':
+                    s_elem.click()
+                break
+            except Exception as e:
+                if tries == 3:
+                    raise e
+                try:
+                    self.s_action.move_by_offset(0,0).click().perform()
+                except Exception as e2:
+                    pass
+            tries += 1
+
+        # expandir Saldo e Extrato da Conta, se necessário
+        tries = 1
+        while True:
+            try:
+                time.sleep(3)
+                s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'saldo-extrato-card-accordion')))
+                if s_elem.get_attribute('aria-expanded') == 'false':
+                    s_elem.click()
+                break
+            except Exception as e:
+                if tries == 3:
+                    raise e
+                try:
+                    self.s_action.move_by_offset(0,0).click().perform()
+                except Exception as e2:
+                    pass
+            tries += 1
 
     def open(self, driver_path):
 
@@ -55,6 +110,7 @@ class ScrawlerItau:
         self.s_driver = webdriver.Firefox(executable_path=driver_path)
         self.s_driver.get('http://www.itau.com.br')
         self.s_wait = WebDriverWait(self.s_driver,10)
+        self.s_action = ActionChains(self.s_driver)
 
         # inserir agência e conta
         time.sleep(3)
@@ -97,27 +153,36 @@ class ScrawlerItau:
         s_elem = self.s_wait.until(EC.visibility_of_element_located((By.PARTIAL_LINK_TEXT,'acessar')))
         s_elem.click()
 
-        # aguardar página carregar
         time.sleep(6)
 
+        self._expand_home()
+        time.sleep(3)
+        self.last_location = 'home'
+
     def go_home(self):
-
+        if self.last_location == 'home':
+            return
+        
         # ir para página inicial
-        time.sleep(3)
-        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'HomeLogo')))
-        s_elem.click()
+        tries = 1
+        while True:
+            try:
+                time.sleep(3)
+                s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'HomeLogo')))
+                s_elem.click()
+                break
+            except Exception as e:
+                if tries == 3:
+                    raise e
+                try:
+                    self.s_action.move_by_offset(0,0).click().perform()
+                except Exception as e2:
+                    pass
+            tries += 1
 
-        # expandir Cartões, se necessário
+        self._expand_home()
         time.sleep(3)
-        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'cartao-card-accordion')))
-        if s_elem.get_attribute('aria-expanded') == 'false':
-            s_elem.click()
-
-        # expandir Saldo e Extrato da Conta, se necessário
-        time.sleep(3)
-        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.ID,'saldo-extrato-card-accordion')))
-        if s_elem.get_attribute('aria-expanded') == 'false':
-            s_elem.click()
+        self.last_location = 'home'
 
     def get_saldo(self):
         self.go_home()
@@ -142,24 +207,26 @@ class ScrawlerItau:
             if mes != 0 or ano != 0:
                 raise MesAnoException('Utilizar mes e ano somente para "tipo=ExtratoTipo.MesCompleto".')
 
-        self.go_home()
-
         base = []
         order = {}
 
-        # abrir extrato
-        s_elem = self.s_wait.until(EC.element_to_be_clickable((By.CLASS_NAME,'btn-bank-statement')))
-        s_elem.click()
+        if self.last_location != 'extrato':
+            self.go_home()
+
+            # abrir extrato
+            s_elem = self.s_wait.until(EC.element_to_be_clickable((By.CLASS_NAME,'btn-bank-statement')))
+            s_elem.click()
+        
+        self.last_location = 'extrato'
 
         # definir período
         tries = 1
-        selected = False
-        while not selected:
+        while True:
             try:
                 time.sleep(3)
                 s_elem = self.s_wait.until(EC.visibility_of_element_located((By.CLASS_NAME,'select__options')))
                 Select(s_elem).select_by_value(ExtratoTipo.Ultimos3dias if tipo == ExtratoTipo.Futuro else tipo)
-                selected = True
+                break
             except Exception as e:
                 if tries == 3:
                     raise e
@@ -234,7 +301,6 @@ class ScrawlerItau:
         return base
 
     def list_cartoes(self):
-
         self.go_home()
 
         base = []
@@ -256,14 +322,13 @@ class ScrawlerItau:
         return base
 
     def get_cartao_fatura(self, nome, tipo=CartaoFaturaTipo.Atual):
-        self.go_home()
-
         base = []
         before = None
 
-        # acessar cartão
-        time.sleep(4)
-        self.s_wait.until(EC.element_to_be_clickable((By.LINK_TEXT,nome))).click()
+        if self.last_location != 'cartao_fatura_'+nome:
+            self.go_home()
+            self.s_wait.until(EC.element_to_be_clickable((By.LINK_TEXT,nome))).click()
+        self.last_location = 'cartao_fatura_'+nome
 
         # acessar fatura anterior
         if tipo == CartaoFaturaTipo.Anterior:
@@ -284,7 +349,7 @@ class ScrawlerItau:
                     if tries == 3:
                         raise e
                     tries += 1
-        
+
         # loop
         while True:
             time.sleep(4)
@@ -327,7 +392,8 @@ class ScrawlerItau:
                             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                             # date
                             dates = s_elem_cols[0].text.strip().split(' / ')
-                            date = datetime.date(2021,self._meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
+                            month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
+                            date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
@@ -337,21 +403,58 @@ class ScrawlerItau:
 
                             # item
                             items.append({
-                                "group": card_name,
+                                "group": card_name + ' - ' + type_name,
                                 "date": date,
                                 "name": s_elem_cols[1].text.strip(),
                                 "value": value,
                                 "order": order[date]
                             })
 
-                elif type_name == 'encargos e serviços':
+                elif type_name == 'compras parceladas':
+
+                    for s_elem_card in s_elem_type.find_elements_by_class_name('fatura__tipo'):
+
+                        card_name = s_elem_card.find_element_by_tag_name('h4').text.strip()
+
+                        order = {}
+
+                        try:
+                            s_elem_tbody = s_elem_type.find_element_by_tag_name('tbody')
+                        except Exception as e:
+                            s_elem_tbody = None
+                        
+                        if s_elem_tbody:
+                            for s_elem_row in s_elem_tbody.find_elements_by_tag_name('tr'):
+
+                                # columns
+                                s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
+                                # date
+                                dates = s_elem_cols[0].text.strip().split(' / ')
+                                month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
+                                date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                # value
+                                values = s_elem_cols[2].text.strip().split('\n')
+                                value = -1 * float(
+                                    values[0 if len(values) == 1 else 1].replace('R$ ','').replace('.','').replace(',','.'))
+                                # order
+                                order[date] = 1 + (order[date] if date in order else 0)
+
+                                # item
+                                items.append({
+                                    "group": card_name + ' - ' + type_name,
+                                    "date": date,
+                                    "name": s_elem_cols[1].text.strip(),
+                                    "value": value,
+                                    "order": order[date]
+                                })
+
+                else:
 
                     order = {}
 
                     try:
                         s_elem_tbody = s_elem_type.find_element_by_tag_name('tbody')
                     except Exception as e:
-                        print(e)
                         s_elem_tbody = None
                     
                     if s_elem_tbody:
@@ -361,7 +464,8 @@ class ScrawlerItau:
                             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                             # date
                             dates = s_elem_cols[0].text.strip().split(' / ')
-                            date = datetime.date(2021,self._meses[dates[1]],int(dates[0])).strftime('%Y-%m-%d')
+                            month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
+                            date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
@@ -391,10 +495,7 @@ class ScrawlerItau:
             else:
                 break
 
-        if tipo == CartaoFaturaTipo.Proximas:
-            return base
-        else:
-            return base[0]
+        return base
 
     def close(self):
         self.s_driver.quit()
