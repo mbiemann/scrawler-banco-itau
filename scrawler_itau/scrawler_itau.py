@@ -60,6 +60,8 @@ class ScrawlerItau:
         "dez": 12
     }
 
+    cartao_fatura_ref = {}
+
     def __init__(self, agencia, conta, nome, senha):
         self._agencia = agencia
         self._conta = conta
@@ -330,6 +332,23 @@ class ScrawlerItau:
             self.s_wait.until(EC.element_to_be_clickable((By.LINK_TEXT,nome))).click()
         self.last_location = 'cartao_fatura_'+nome
 
+        # ref
+        fatref_date = self.s_wait.until(EC.presence_of_element_located((By.CLASS_NAME,'c-category-status__venc'))) \
+            .text.strip().replace('venc. ','').split('/')
+        fatref = datetime.date(2000+int(fatref_date[2]),int(fatref_date[1]),int(fatref_date[0]))
+        if nome not in self.cartao_fatura_ref:
+            self.cartao_fatura_ref[nome] = fatref
+        else:
+            while fatref != self.cartao_fatura_ref[nome]:
+                if fatref < self.cartao_fatura_ref[nome]:
+                    class_click = 'icon-itaufonts_seta_right'
+                else:
+                    class_click = 'icon-itaufonts_seta'
+                self.s_wait.until(EC.presence_of_element_located((By.CLASS_NAME,class_click))).click()
+                fatref_date = self.s_wait.until(EC.presence_of_element_located((By.CLASS_NAME,'c-category-status__venc'))) \
+                    .text.strip().replace('venc. ','').split('/')
+                fatref = datetime.date(2000+int(fatref_date[2]),int(fatref_date[1]),int(fatref_date[0]))
+
         # acessar fatura anterior
         if tipo == CartaoFaturaTipo.Anterior:
             time.sleep(4)
@@ -355,6 +374,7 @@ class ScrawlerItau:
             time.sleep(4)
 
             items = []
+            order = {}
 
             # vencimento fatura
             s_elem = self.s_wait.until(EC.presence_of_element_located((By.CLASS_NAME,'c-category-status__venc')))
@@ -378,22 +398,25 @@ class ScrawlerItau:
                 except:
                     break
 
-                if type_name == 'lançamentos nacionais':
+                if type_name in ['lançamentos nacionais','lançamentos internacionais']:
 
                     for s_elem_card in s_elem_type.find_elements_by_class_name('fatura__tipo'):
 
                         card_name = s_elem_card.find_element_by_tag_name('h4').text.strip()
 
-                        order = {}
-
+                        last_date = None
                         for s_elem_row in s_elem_card.find_elements_by_class_name('linha-valor-total'):
 
                             # columns
                             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                             # date
                             dates = s_elem_cols[0].text.strip().split(' / ')
-                            month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
-                            date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                            if dates == ['']:
+                                date = last_date
+                            else:
+                                month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
+                                date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                last_date = date
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
@@ -415,23 +438,27 @@ class ScrawlerItau:
                     for s_elem_card in s_elem_type.find_elements_by_class_name('fatura__tipo'):
 
                         card_name = s_elem_card.find_element_by_tag_name('h4').text.strip()
-
-                        order = {}
-
+                        
                         try:
                             s_elem_tbody = s_elem_type.find_element_by_tag_name('tbody')
                         except Exception as e:
                             s_elem_tbody = None
                         
                         if s_elem_tbody:
+
+                            last_date = None
                             for s_elem_row in s_elem_tbody.find_elements_by_tag_name('tr'):
 
                                 # columns
                                 s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                                 # date
                                 dates = s_elem_cols[0].text.strip().split(' / ')
-                                month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
-                                date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                if dates == ['']:
+                                    date = last_date
+                                else:
+                                    month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
+                                    date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                    last_date = date
                                 # value
                                 values = s_elem_cols[2].text.strip().split('\n')
                                 value = -1 * float(
@@ -450,22 +477,26 @@ class ScrawlerItau:
 
                 else:
 
-                    order = {}
-
                     try:
                         s_elem_tbody = s_elem_type.find_element_by_tag_name('tbody')
                     except Exception as e:
                         s_elem_tbody = None
                     
                     if s_elem_tbody:
+
+                        last_date = None
                         for s_elem_row in s_elem_tbody.find_elements_by_tag_name('tr'):
 
                             # columns
                             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                             # date
                             dates = s_elem_cols[0].text.strip().split(' / ')
-                            month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
-                            date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                            if dates == ['']:
+                                date = last_date
+                            else:
+                                month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
+                                date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                last_date = date
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
