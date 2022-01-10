@@ -248,7 +248,7 @@ class ScrawlerItau:
                 .find_elements_by_class_name('table-extract__row')
             for s_elem_row in s_elem:
                 s_elem_cols = s_elem_row.find_elements_by_tag_name('div')
-                date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
+                date = datetime.date.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
                 name = s_elem_cols[1].text.strip()
                 value = 0 - float(s_elem_cols[2].text.strip().replace('.','').replace(',','.'))
                 
@@ -291,7 +291,7 @@ class ScrawlerItau:
             for s_elem_row in s_elem.find_elements_by_tag_name('tr'):
                 s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                 if len(s_elem_cols) >= 3 and s_elem_cols[2].text.strip() != '':
-                    date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
+                    date = datetime.date.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
                     name = s_elem_cols[1].text.strip()
                     value = float(s_elem_cols[2].text.strip().replace('.','').replace(',','.'))
 
@@ -322,7 +322,7 @@ class ScrawlerItau:
             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
             base.append({
                 "name": s_elem_cols[0].find_element_by_class_name('card-name').text.strip(),
-                "due_date": datetime.datetime.strptime(s_elem_cols[1].text.strip(),'%d/%m/%Y').isoformat(),
+                "due_date": datetime.date.strptime(s_elem_cols[1].text.strip(),'%d/%m/%Y').isoformat(),
                 "value": float(s_elem_cols[2].text.strip().replace('.','').replace(',','.')),
                 "status": s_elem_cols[3].text.strip()
             })
@@ -386,6 +386,7 @@ class ScrawlerItau:
             s_elem = self.s_wait.until(EC.presence_of_element_located((By.CLASS_NAME,'c-category-status__venc')))
             dates = s_elem.text.strip().replace('venc. ','').split('/')
             invoice_due_date = datetime.date(2000+int(dates[2]),int(dates[1]),int(dates[0]))
+            invoice_due_year = invoice_due_date.year
 
             # parar loop se fatura anterior for igual que fatura atual
             if (tipo == CartaoFaturaTipo.Proximas and 
@@ -421,7 +422,7 @@ class ScrawlerItau:
                                 date = last_date
                             else:
                                 month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
-                                date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                date = datetime.date(invoice_due_year,month,int(dates[0])).isoformat()
                                 last_date = date
                             # name
                             name = s_elem_cols[1].text.strip()
@@ -467,7 +468,7 @@ class ScrawlerItau:
                                     date = last_date
                                 else:
                                     month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
-                                    date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                    date = datetime.date(invoice_due_year,month,int(dates[0])).isoformat()
                                     last_date = date
                                 # name
                                 name = s_elem_cols[1].text.strip()
@@ -509,7 +510,7 @@ class ScrawlerItau:
                                 date = last_date
                             else:
                                 month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
-                                date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
+                                date = datetime.date(invoice_due_year,month,int(dates[0])).isoformat()
                                 last_date = date
                             # name
                             name = s_elem_cols[1].text.strip()
