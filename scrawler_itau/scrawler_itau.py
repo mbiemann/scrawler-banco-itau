@@ -209,9 +209,6 @@ class ScrawlerItau:
             if mes != 0 or ano != 0:
                 raise MesAnoException('Utilizar mes e ano somente para "tipo=ExtratoTipo.MesCompleto".')
 
-        base = []
-        order = {}
-
         if self.last_location != 'extrato':
             self.go_home()
 
@@ -234,6 +231,9 @@ class ScrawlerItau:
                     raise e
                 tries += 1
 
+        dupl = {}
+        base = []
+
         # Lançamentos Futuros
         if tipo == ExtratoTipo.Futuro:
 
@@ -248,16 +248,19 @@ class ScrawlerItau:
                 .find_elements_by_class_name('table-extract__row')
             for s_elem_row in s_elem:
                 s_elem_cols = s_elem_row.find_elements_by_tag_name('div')
-                date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').strftime('%Y-%m-%d')
+                date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
                 name = s_elem_cols[1].text.strip()
                 value = 0 - float(s_elem_cols[2].text.strip().replace('.','').replace(',','.'))
-                order[date] = 1 + (order[date] if date in order else 0)
+                
+                dupl_key = date + '|' + name + '|' + str(value)
+                dupl[dupl_key] = dupl.get(dupl_key, 0) + 1
+                if dupl[dupl_key] > 1:
+                    name = name + ' ('+str(dupl[dupl_key])+')'
+
                 base.append({
                     "date": date,
-                    "order": order[date],
                     "name": name,
-                    "value": value,
-                    "executed": False,
+                    "value": value
                 })
 
         # Extrato
@@ -288,16 +291,19 @@ class ScrawlerItau:
             for s_elem_row in s_elem.find_elements_by_tag_name('tr'):
                 s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                 if len(s_elem_cols) >= 3 and s_elem_cols[2].text.strip() != '':
-                    date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').strftime('%Y-%m-%d')
+                    date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
                     name = s_elem_cols[1].text.strip()
                     value = float(s_elem_cols[2].text.strip().replace('.','').replace(',','.'))
-                    order[date] = 1 + (order[date] if date in order else 0)
+
+                    dupl_key = date + '|' + name + '|' + str(value)
+                    dupl[dupl_key] = dupl.get(dupl_key, 0) + 1
+                    if dupl[dupl_key] > 1:
+                        name = name + ' ('+str(dupl[dupl_key])+')'
+                    
                     base.append({
                         "date": date,
-                        "order": order[date],
                         "name": name,
-                        "value": value,
-                        "executed": True,
+                        "value": value
                     })
 
         return base
@@ -316,7 +322,7 @@ class ScrawlerItau:
             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
             base.append({
                 "name": s_elem_cols[0].find_element_by_class_name('card-name').text.strip(),
-                "due_date": datetime.datetime.strptime(s_elem_cols[1].text.strip(),'%d/%m/%Y').strftime('%Y-%m-%d'),
+                "due_date": datetime.datetime.strptime(s_elem_cols[1].text.strip(),'%d/%m/%Y').isoformat(),
                 "value": float(s_elem_cols[2].text.strip().replace('.','').replace(',','.')),
                 "status": s_elem_cols[3].text.strip()
             })
@@ -373,9 +379,9 @@ class ScrawlerItau:
         while True:
             time.sleep(4)
 
+            dupl = {}
             items = []
-            order = {}
-
+            
             # vencimento fatura
             s_elem = self.s_wait.until(EC.presence_of_element_located((By.CLASS_NAME,'c-category-status__venc')))
             dates = s_elem.text.strip().replace('venc. ','').split('/')
@@ -417,20 +423,24 @@ class ScrawlerItau:
                                 month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
                                 date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
                                 last_date = date
+                            # name
+                            name = s_elem_cols[1].text.strip()
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
                                 values[0 if len(values) == 1 else 1].replace('R$ ','').replace('.','').replace(',','.'))
-                            # order
-                            order[date] = 1 + (order[date] if date in order else 0)
+                            
+                            dupl_key = date + '|' + name + '|' + str(value)
+                            dupl[dupl_key] = dupl.get(dupl_key, 0) + 1
+                            if dupl[dupl_key] > 1:
+                                name = name + ' ('+str(dupl[dupl_key])+')'
 
                             # item
                             items.append({
                                 "group": card_name + ' - ' + type_name,
                                 "date": date,
-                                "name": s_elem_cols[1].text.strip(),
-                                "value": value,
-                                "order": order[date]
+                                "name": name,
+                                "value": value
                             })
 
                 elif type_name == 'compras parceladas':
@@ -459,20 +469,24 @@ class ScrawlerItau:
                                     month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
                                     date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
                                     last_date = date
+                                # name
+                                name = s_elem_cols[1].text.strip()
                                 # value
                                 values = s_elem_cols[2].text.strip().split('\n')
                                 value = -1 * float(
                                     values[0 if len(values) == 1 else 1].replace('R$ ','').replace('.','').replace(',','.'))
-                                # order
-                                order[date] = 1 + (order[date] if date in order else 0)
+                                
+                                dupl_key = date + '|' + name + '|' + str(value)
+                                dupl[dupl_key] = dupl.get(dupl_key, 0) + 1
+                                if dupl[dupl_key] > 1:
+                                    name = name + ' ('+str(dupl[dupl_key])+')'
 
                                 # item
                                 items.append({
                                     "group": card_name + ' - ' + type_name,
                                     "date": date,
-                                    "name": s_elem_cols[1].text.strip(),
-                                    "value": value,
-                                    "order": order[date]
+                                    "name": name,
+                                    "value": value
                                 })
 
                 else:
@@ -497,20 +511,24 @@ class ScrawlerItau:
                                 month = self._meses_abr[dates[1]] if len(dates[1]) == 3 else self._meses[dates[1]]
                                 date = datetime.date(2021,month,int(dates[0])).strftime('%Y-%m-%d')
                                 last_date = date
+                            # name
+                            name = s_elem_cols[1].text.strip()
                             # value
                             values = s_elem_cols[2].text.strip().split('\n')
                             value = -1 * float(
                                 values[0 if len(values) == 1 else 1].replace('R$ ','').replace('.','').replace(',','.'))
-                            # order
-                            order[date] = 1 + (order[date] if date in order else 0)
+                            
+                            dupl_key = date + '|' + name + '|' + str(value)
+                            dupl[dupl_key] = dupl.get(dupl_key, 0) + 1
+                            if dupl[dupl_key] > 1:
+                                name = name + ' ('+str(dupl[dupl_key])+')'
 
                             # item
                             items.append({
                                 "group": type_name,
                                 "date": date,
-                                "name": s_elem_cols[1].text.strip(),
-                                "value": value,
-                                "order": order[date]
+                                "name": name,
+                                "value": value
                             })
 
             base.append({
