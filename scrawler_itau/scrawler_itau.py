@@ -248,7 +248,7 @@ class ScrawlerItau:
                 .find_elements_by_class_name('table-extract__row')
             for s_elem_row in s_elem:
                 s_elem_cols = s_elem_row.find_elements_by_tag_name('div')
-                date = datetime.date.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
+                date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').strftime('%Y-%m-%d')
                 name = s_elem_cols[1].text.strip()
                 value = 0 - float(s_elem_cols[2].text.strip().replace('.','').replace(',','.'))
                 
@@ -291,7 +291,7 @@ class ScrawlerItau:
             for s_elem_row in s_elem.find_elements_by_tag_name('tr'):
                 s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
                 if len(s_elem_cols) >= 3 and s_elem_cols[2].text.strip() != '':
-                    date = datetime.date.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').isoformat()
+                    date = datetime.datetime.strptime(s_elem_cols[0].text.strip(),'%d/%m/%Y').strftime('%Y-%m-%d')
                     name = s_elem_cols[1].text.strip()
                     value = float(s_elem_cols[2].text.strip().replace('.','').replace(',','.'))
 
@@ -322,7 +322,7 @@ class ScrawlerItau:
             s_elem_cols = s_elem_row.find_elements_by_tag_name('td')
             base.append({
                 "name": s_elem_cols[0].find_element_by_class_name('card-name').text.strip(),
-                "due_date": datetime.date.strptime(s_elem_cols[1].text.strip(),'%d/%m/%Y').isoformat(),
+                "due_date": datetime.datetime.strptime(s_elem_cols[1].text.strip(),'%d/%m/%Y').strftime('%Y-%m-%d'),
                 "value": float(s_elem_cols[2].text.strip().replace('.','').replace(',','.')),
                 "status": s_elem_cols[3].text.strip()
             })
